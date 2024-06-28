@@ -1,10 +1,24 @@
 const express = require('express');
 const app = express();
 const cors = require('cors');
+const { MongoClient } = require('mongodb');
 
 // let user = [{'name':'Alan JS','email':'alanjosesanto@outlook.com','phone':'8086350450','username':'an_alan_musical'},{'name':'SreeLakshmi','email':'sreesreelakshmi248@gmail.com','phone':'9496898901','username':'_sree_a_lakshmi_'}];
-let userdata = [];
+let user = [];
+let db='';  
 // let userdata = [{'name':'Alan JS','email':'alanjosesanto@outlook.com','phone':'8086350450','username':'an_alan_musical'},{'name':'SreeLakshmi','email':'sreesreelakshmi248@gmail.com','phone':'9496898901','username':'_sree_a_lakshmi_'}];
+
+//mongo connects
+
+async function mongoConnect() {
+    let client = new MongoClient('mongodb+srv://anshif:nesRoWgW5SqAD0yF@cluster0.8dtglzr.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0');
+    await client.connect();
+    db = client.db('test');
+   ;
+ }
+ 
+ 
+
 
 app.use(cors());
 app.use(express.json());
@@ -16,15 +30,24 @@ app.use(express.json());
 
 
 
-app.post('/userdata',function(req,res){
+
+
+app.get('/users',async function(req,res){
+    let output = await db.collection('user').find({}).toArray();
+    res.json(output);
+})
+
+app.post('/users',async function(req,res){
+    let output = await db.collection('user').insertOne(req.body);
     console.log(req.body);
-    userdata.push(req.body);
-    res.json({success:true});
+    user.push(output);
 });
 
-app.get('/userdata',function(req,res){
-    res.json(userdata);
-})
+// app.post('/register',async function(req,res){
+//     console.log(req.body);
+//     userdata.push(req.body);
+//     res.json({success:true});
+// });
 
 // app.post('/login', function(req,res){
 //     console.log(req.body);
@@ -44,19 +67,33 @@ app.get('/userdata',function(req,res){
 
 //my own code mwone
 
-app.post('/login',function(req,res){
-    console.log(req.body);
-    const {userName,password} = req.body;
-    const usr = userdata.find(u =>u.userName === userName && u.password===password);
-    if (usr)
-        {
-            res.json({success:true,usr});
+
+//the working onee
+app.post('/login', async function(req, res) {
+    console.log('Login attempt:', req.body);
+    const { userName, password } = req.body;
+    try {
+        let usr = await db.collection('user').findOne({ userName, password });
+        if (usr) {
+            console.log('Login successful:', usr);
+            res.json({ success: true, usr });
+        } else {
+            console.log('Invalid USER or PASS');
+            res.json({ success: false, message: 'Invalid USER or PASS' });
         }
-        else{
-            res.json({success:false,message:"Invalid USER or PASS"});
-        }
+    } catch (error) {
+        console.error('Error during login:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
 });
+
+// app.post('/login',async function(req,res){
+//     console.log(req.body);
+//     let output = await db.collection('user').insertOne(req.body);
+    
+// })
 
 app.listen(4550,function() {
     console.log('Server is listening ... on port 4550');
+    mongoConnect();
 })
